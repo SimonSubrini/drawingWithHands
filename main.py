@@ -1,6 +1,5 @@
 import cv2
 import mediapipe as mp
-import numpy as np
 
 mp_drawing = mp.solutions.drawing_utils
 mp_hands = mp.solutions.hands
@@ -8,6 +7,8 @@ mp_hands = mp.solutions.hands
 cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 drawn_points = []
 touch_threshold = 40  # Dimensiones del "borrador"
+
+# Inicialización de diccionario para rastrear los dedos
 fingers = {
     'thumb': [],
     'index': [],
@@ -16,34 +17,42 @@ fingers = {
     'pinky': []
 }
 
+# Colores
+colors = [
+    (255, 0, 0), (255, 0, 255), (0, 255, 0), (0, 255, 255)
+]
 
+
+# Función para obtener las coordenadas de los dedos
 def getFingerPosition(landmarks):
-    fingers['thumb'] = [
-        landmarks[2],
-        landmarks[3],
-        landmarks[4]
-    ]
-    fingers['index'] = [
-        landmarks[6],
-        landmarks[7],
-        landmarks[8]
-    ]
-    fingers['middle'] = [
-        landmarks[10],
-        landmarks[11],
-        landmarks[12]
-    ]
-    fingers['ring'] = [
-        landmarks[14],
-        landmarks[15],
-        landmarks[16]
-    ]
-    fingers['pinky'] = [
-        landmarks[18],
-        landmarks[19],
-        landmarks[20]
-    ]
+    fingers['thumb'] = [landmarks[1], landmarks[2], landmarks[3], landmarks[4]]
+    fingers['index'] = [landmarks[6], landmarks[7], landmarks[8]]
+    fingers['middle'] = [landmarks[10], landmarks[11], landmarks[12]]
+    fingers['ring'] = [landmarks[14], landmarks[15], landmarks[16]]
+    fingers['pinky'] = [landmarks[18], landmarks[19], landmarks[20]]
     return fingers
+
+
+# Función para detectar el toque y eliminar puntos
+def detectAndEraseTouches(hand_landmarks, points):
+    thumb = fingers['thumb']
+    thumb_tip = hand_landmarks[4]  # Punto de la punta del pulgar
+    mean_thumb = (thumb[0].x + thumb[1].x + thumb[2].x + thumb[2].x)/4
+
+    if (thumb[0].x + thumb[3].x)/2 > mean_thumb > (thumb[1].x + thumb[2].x)/2:
+        for point in points:
+            x, y, _ = point
+            distance = ((thumb_tip.x * width - x) ** 2 + (thumb_tip.y * height - y) ** 2) ** 0.5
+            if distance < touch_threshold:
+                points.remove(point)
+
+
+# Función para agregar puntos en función de otros dedos
+def addPointsForFingers(finger_landmarks):
+    for c, finger in enumerate(finger_landmarks):
+        if finger[0].y > finger[1].y > finger[2].y:
+            x, y = int(finger[2].x * width), int(finger[2].y * height)
+            drawn_points.append((x, y, colors[c]))
 
 
 with mp_hands.Hands(
@@ -69,33 +78,11 @@ with mp_hands.Hands(
                     mp_drawing.DrawingSpec(color=(143, 146, 219), thickness=2, circle_radius=4),
                     mp_drawing.DrawingSpec(color=(179, 208, 65), thickness=4))
 
-                fingers = getFingerPosition(hand_landmarks.landmark)  # Obtener las coordenadas de cada punto
+                fingers = getFingerPosition(hand_landmarks.landmark)
 
-                if np.abs(fingers['thumb'][0].y - fingers['thumb'][1].y) < np.abs(
-                        fingers['thumb'][1].y - fingers['thumb'][2].y):
-                    xT, yT = int(fingers['thumb'][2].x * width), int(fingers['thumb'][2].y * height)
-                    for point in drawn_points:
-                        x, y, _ = point
-                        distance = ((xT - x) ** 2 + (yT - y) ** 2) ** 0.5
-                        if distance < touch_threshold:
-                            drawn_points.remove(point)
-                else:
-                    if fingers['index'][0].y > fingers['index'][1].y > fingers['index'][2].y:
-                        x, y = int(fingers['index'][2].x * width), int(fingers['index'][2].y * height)
-                        color = (0, 0, 255)
-                        drawn_points.append((x, y, color))
-                    if fingers['middle'][0].y > fingers['middle'][1].y > fingers['middle'][2].y:
-                        x, y = int(fingers['middle'][2].x * width), int(fingers['middle'][2].y * height)
-                        color = (255, 0, 255)
-                        drawn_points.append((x, y, color))
-                    if fingers['ring'][0].y > fingers['ring'][1].y > fingers['ring'][2].y:
-                        x, y = int(fingers['ring'][2].x * width), int(fingers['ring'][2].y * height)
-                        color = (0, 255, 255)
-                        drawn_points.append((x, y, color))
-                    if fingers['pinky'][0].y > fingers['pinky'][1].y > fingers['pinky'][2].y:
-                        x, y = int(fingers['pinky'][2].x * width), int(fingers['pinky'][2].y * height)
-                        color = (0, 255, 0)
-                        drawn_points.append((x, y, color))
+                detectAndEraseTouches(hand_landmarks.landmark, drawn_points)
+
+                addPointsForFingers([fingers['index'], fingers['middle'], fingers['ring'], fingers['pinky']])
 
         # Dibujar todos los puntos almacenados
         for point in drawn_points:
