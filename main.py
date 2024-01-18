@@ -1,38 +1,12 @@
 import cv2
 import mediapipe as mp
-import tkinter as tk
-from tkinter import filedialog
-from tkinter import messagebox
-from threading import Thread
 from PIL import Image, ImageTk
+import tkinter as tk
+import imutils
 import numpy as np
 
-# Set constants
-fingers = {
-    'thumb': [],
-    'index': [],
-    'middle': [],
-    'ring': [],
-    'pinky': []
-}
 
-colors = [
-    (255, 0, 0), (255, 0, 255), (0, 255, 0), (0, 255, 255)
-]
-
-mp_drawing = mp.solutions.drawing_utils
-mp_hands = mp.solutions.hands
-cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-width, height = 860, 640
-
-# Declaration of variables
-drawn_points = []
-touch_threshold = 40
-line_width = 10
-frame = None
-
-
-# Declaration of functions
+# Función para obtener las coordenadas de los dedos
 def getFingerPosition(landmarks):
     fingers['thumb'] = [landmarks[1], landmarks[2], landmarks[3], landmarks[4]]
     fingers['index'] = [landmarks[6], landmarks[7], landmarks[8]]
@@ -42,127 +16,202 @@ def getFingerPosition(landmarks):
     return fingers
 
 
-def detectAndEraseTouches(finger_landmarks, points):
-    thumb_tip = fingers['thumb'][3]
+# Función para calcular la distancia entre dos puntos
+def dist(point1, point2):
+    d = ((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2) ** 0.5
+    return d
+
+
+# Función para detectar el toque y eliminar puntos
+def detectAndEraseTouches(finger_landmarks, points, wrist):
     thumb = finger_landmarks['thumb']
     index = finger_landmarks['index']
     middle = finger_landmarks['middle']
     ring = finger_landmarks['ring']
     pinky = finger_landmarks['pinky']
-    thumb_up = thumb[3].y < index[2].y and thumb[3].y < middle[2].y and thumb[3].y < ring[2].y and thumb[3].y < pinky[
-        2].y
+    thumb_tip = (thumb[3].x * drawWidth, thumb[3].y * drawHeight)  # Obtener las coordenadas x, y del pulgar
+    distT_W = dist(thumb_tip, wrist)
+    if distT_W > max(dist([index[2].x * drawWidth, index[2].y * drawHeight], wrist),
+                     dist([middle[2].x * drawWidth, middle[2].y * drawHeight], wrist),
+                     dist([ring[2].x * drawWidth, ring[2].y * drawHeight], wrist),
+                     dist([pinky[2].x * drawWidth, pinky[2].y * drawHeight], wrist)):
+        thumb_up = True
+    else:
+        thumb_up = False
     if thumb_up:
         for point in points:
             x, y, _, _ = point
-            distance = ((thumb_tip.x * width - x) ** 2 + (thumb_tip.y * height - y) ** 2) ** 0.5
+            distance = dist(thumb_tip, (x, y))
             if distance < touch_threshold:
                 points.remove(point)
         return True
     return False
 
 
-def addPointsForFingers(finger_landmarks):
+# Función para cambiar el tamaño del pincel
+def changeBrushSize(finger_landmarks, wrist):
+    thumb = finger_landmarks['thumb']
+    index = finger_landmarks['index']
+    middle = finger_landmarks['middle']
+    ring = finger_landmarks['ring']
+    pinky = finger_landmarks['pinky']
+    thumb_tip = (thumb[3].x * drawWidth, thumb[3].y * drawHeight)  # Obtener las coordenadas x, y del pulgar
+    distT_W = dist(thumb_tip, wrist)
+    distI_W = dist([index[2].x * drawWidth, index[2].y * drawHeight], wrist)
+    distM_W = dist([middle[2].x * drawWidth, middle[2].y * drawHeight], wrist)
+    distR_W = dist([ring[2].x * drawWidth, ring[2].y * drawHeight], wrist)
+    distP_W = dist([pinky[2].x * drawWidth, pinky[2].y * drawHeight], wrist)
+    if distT_W / 1.5 > max(distM_W, distR_W, distP_W) and distI_W > max(distM_W, distR_W, distP_W):
+        b_size = int(dist(thumb_tip, (index[2].x * drawWidth, index[2].y * drawHeight)) / 10)
+        print(f"brush size: {b_size}")
+    else:
+        b_size = -1
+    return b_size
+
+
+# Función para agregar puntos en función de otros dedos
+def addPointsForFingers(finger_landmarks, s):
     for c, finger in enumerate(finger_landmarks):
         if finger[0].y > finger[1].y > finger[2].y:
-            x, y = int(finger[2].x * width), int(finger[2].y * height)
-            drawn_points.append((x, y, colors[c], line_width))
+            x, y = int(finger[2].x * drawWidth), int(finger[2].y * drawHeight)
+            drawn_points.append((x, y, colors[c], s))
 
 
-def save_image():
-    file_path = filedialog.asksaveasfilename(defaultextension=".png", filetypes=[("PNG files", "*.png")])
-    if file_path:
-        cv2.imwrite(file_path, frame)
-        messagebox.showinfo("Guardado", "La imagen se ha guardado exitosamente.")
+def draw_hand(canvas, landmark):
+    for fingers_points in landmark:
+        canvas.create_oval((fingers_points.x * drawWidth) - 10, (fingers_points.y * drawHeight) - 10,
+                           (fingers_points.x * drawWidth) + 10,
+                           (fingers_points.y * drawHeight) + 10, fill="#000")
+
+        canvas.create_oval((fingers_points.x * drawWidth) - 5, (fingers_points.y * drawHeight) - 5,
+                           (fingers_points.x * drawWidth) + 5,
+                           (fingers_points.y * drawHeight) + 5, fill="#fff")
 
 
-def change_line_width(val):
-    global line_width
-    line_width = int(val)
+def update_hand_tracking(canvas):
+    global drawn_points, brush_size
+
+    ret, frame = cap.read()
+    if not ret:
+        return
+
+    # ------------------------------------------------------------ Camara
+    frame_cam = cv2.resize(frame, (420, 236))
+    frame_cam = cv2.flip(frame_cam, 1)
+    cam_rgb = cv2.cvtColor(frame_cam, cv2.COLOR_BGR2RGB)
+    cam_image = Image.fromarray(cam_rgb)
+    cam_image = ImageTk.PhotoImage(image=cam_image)
+    lbl_cam.configure(image=cam_image)
+    lbl_cam.image = cam_image
+    # ------------------------------------------------------------ Dibujo
+    frame_draw = cv2.resize(frame, (480, 640))
+    frame_draw = cv2.flip(frame_draw, 1)
+
+    frame_rgb = cv2.cvtColor(frame_draw, cv2.COLOR_BGR2RGB)
+    results = hands.process(frame_rgb)
+
+    # Limpiar el canvas antes de dibujar
+    canvas.delete("all")
+
+    if results.multi_hand_landmarks is not None:
+        for hand_landmarks in results.multi_hand_landmarks:
+            draw_hand(canvas, hand_landmarks.landmark)
+
+            fingers = getFingerPosition(hand_landmarks.landmark)
+
+            if not detectAndEraseTouches(fingers, drawn_points, (
+                    hand_landmarks.landmark[0].x * drawWidth, hand_landmarks.landmark[0].y * drawHeight)):
+                s = changeBrushSize(fingers,
+                                    (hand_landmarks.landmark[0].x * drawWidth,
+                                     hand_landmarks.landmark[0].y * drawHeight))
+                if s > 0:
+                    brush_size = s
+                else:
+                    addPointsForFingers([fingers['index'], fingers['middle'], fingers['ring'], fingers['pinky']],
+                                        brush_size)
+
+    # Dibujar los puntos en el canvas
+    for point in drawn_points:
+        x, y, color, size = point
+        canvas.create_oval(x - size, y - size, x + size, y + size, fill="#%02x%02x%02x" % color)
+
+    # Llamar a la función nuevamente después de un tiempo
+    canvas.after(10, update_hand_tracking, canvas)
 
 
-def change_eraser_width(val):
-    global touch_threshold
-    touch_threshold = int(val)
+def start_frame():
+    global cap
+    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+    update_hand_tracking(lbl_draw)
 
 
-def update_image():
-    global frame
-    if frame is not None:
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        photo = ImageTk.PhotoImage(image=Image.fromarray(frame_rgb))
-        label.config(image=photo)
-        label.image = photo
-        label.after(10, update_image)
-
-
-def process_images():
-    ret = True
-    with mp_hands.Hands(
-            static_image_mode=False,
-            max_num_hands=1,
-            min_detection_confidence=0.5) as hands:
-        while ret:
-            ret, frame = cap.read()
-            if not ret:
-                break
-
-            frame = cv2.resize(frame, (width, height))
-            frame = cv2.flip(frame, 1)
-
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            results = hands.process(frame_rgb)
-
-            if results.multi_hand_landmarks is not None:
-                for hand_landmarks in results.multi_hand_landmarks:
-                    mp_drawing.draw_landmarks(
-                        frame, hand_landmarks, mp_hands.HAND_CONNECTIONS,
-                        mp_drawing.DrawingSpec(color=(143, 146, 219), thickness=2, circle_radius=4),
-                        mp_drawing.DrawingSpec(color=(179, 208, 65), thickness=4))
-
-                    fingers = getFingerPosition(hand_landmarks.landmark)
-
-                    if not detectAndEraseTouches(fingers, drawn_points):
-                        addPointsForFingers([fingers['index'], fingers['middle'], fingers['ring'], fingers['pinky']])
-
-            for point in drawn_points:
-                x, y, color, size = point
-                cv2.circle(frame, (x, y), size, color, -1)
-
-            cv2.imshow("Frame", frame)
-
-            if cv2.waitKey(1) & 0xFF == 27:
-                break
-
+# Funcion finalizar
+def stop_frame():
     cap.release()
-    cv2.destroyAllWindows()
-    root.quit()  # Detener la GUI al finalizar el procesamiento de imágenes
+    cv2.DestroyAllWindows()
+    print("FIN")
 
 
-# GUI elements
-root = tk.Tk()
-root.title("drawingWithHands")
+# ============================================================================================ Main code
+# -------------------------------------------------------------------------- Variables mediapipe
+mp_drawing = mp.solutions.drawing_utils
+mp_hands = mp.solutions.hands
 
-save_button = tk.Button(root, text="Guardar Imagen", command=save_image)
-save_button.pack()
+# -------------------------------------------------------------------------- Variables de dibujo
+drawn_points = []
+touch_threshold = 40  # Dimensiones del "borrador"
+brush_size = 10  # Tamaño del pincel
 
-line_width_slider = tk.Scale(root, from_=5, to=25, orient="horizontal", label="Ancho de Línea",
-                             command=change_line_width)
-line_width_slider.set(10)
-line_width_slider.pack()
+# Inicialización de diccionario para rastrear los dedos
+fingers = {
+    'thumb': [],
+    'index': [],
+    'middle': [],
+    'ring': [],
+    'pinky': []
+}
 
-eraser_width_slider = tk.Scale(root, from_=10, to=20, orient="horizontal", label="Ancho del Borrador",
-                               command=change_eraser_width)
-eraser_width_slider.set(20)
-eraser_width_slider.pack()
+# Colores
+colors = [
+    (255, 0, 0), (255, 0, 255), (0, 255, 0), (0, 255, 255)
+]
 
-label = tk.Label(root)
-label.pack()
+# -------------------------------------------------------------------------- Variables de Tkinter
+windowWidth = 1280
+windowHeight = 720
+camWidth = 420
+camHeight = 236
+drawWidth = 768
+drawHeight = 432
 
-update_image()
-image_thread = Thread(target=process_images)
-image_thread.daemon = True
-image_thread.start()
+# Crear la ventana principal de Tkinter
+window = tk.Tk()
+window.geometry("%dx%d" % (window.winfo_screenwidth(), window.winfo_screenheight()))
+window.title("DrawingWithHands ")
 
-root.geometry("900x700")
-root.protocol("WM_DELETE_WINDOW", root.quit)  # Manejar el cierre de ventana
-root.mainloop()
+# Botones
+# Iniciar Video
+imagenBI = tk.PhotoImage(file="Inicio.png")
+inicio = tk.Button(window, text="Iniciar", image=imagenBI, height="40", width="200", command=start_frame)
+inicio.place(x=30, y=30)
+
+# Finalizar Video
+imagenBF = tk.PhotoImage(file="Finalizar.png")
+fin = tk.Button(window, text="Finalizar", image=imagenBF, height="40", width="200", command=stop_frame)
+fin.place(x=30, y=100)
+# Video
+lbl_cam = tk.Label(window)
+lbl_cam.place(x=30, y=439)
+
+lbl_draw = tk.Canvas(window, width=drawWidth, height=drawHeight, bg="white")
+lbl_draw.place(x=500, y=30)
+
+cap = None
+
+with mp_hands.Hands(
+        static_image_mode=False,
+        max_num_hands=1,
+        min_detection_confidence=0.5) as hands:
+    # Iniciar el proceso de actualización de la imagen y seguimiento de manos
+
+    window.mainloop()
