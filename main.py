@@ -9,10 +9,11 @@ from drawing_utils import *
 
 
 def start_frame():
-    global cap
+    global cap, drawn_points
     cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-    update_hand_tracking(hands, lbl_draw, cap, lbl_cam, drawn_points, brush_size, colors, actual_color, drawWidth,
-                         drawHeight, touch_threshold, txt_size, txt_color_option)
+    drawn_points = update_hand_tracking(hands, canvas, cap, lbl_cam, drawn_points, brush_size, colors, actual_color,
+                                        drawWidth,
+                                        drawHeight, touch_threshold, txt_size, txt_color_option)
 
 
 def stop_frame():
@@ -26,6 +27,56 @@ def stop_frame():
     showImage = messagebox.askyesno("Drawing With Hands", "Do you want to open image?")
     if showImage:
         img.show()
+
+
+def show_instructions():
+    instructions_window = instructions_screen(window)
+
+
+class instructions_screen(tk.Toplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.title("Instrucciones")
+        self.geometry("800x600")
+
+        tk.Label(self, text="Instrucciones de uso", font=("Arial", 30)).place(x=240, y=30)
+
+        tk.Label(self, text="Posición de la mano:", font=("Arial", 15, "bold"), justify="left").place(x=100, y=90)
+        tk.Label(self,
+                 text="Asegúrate de que tu mano esté siempre visible y frente a la pantalla para un mejor seguimiento.",
+                 font=("Arial", 10), justify="left").place(
+            x=140, y=125)
+
+        tk.Label(self, text="Dibujar:", font=("Arial", 15, "bold"), justify="left").place(x=100, y=160)
+        tk.Label(self, text="Para dibujar, extiende únicamente tu dedo índice y muévelo sobre la pantalla.",
+                 font=("Arial", 10), justify="left").place(
+            x=140, y=195)
+
+        tk.Label(self, text="Borrar:", font=("Arial", 15, "bold"), justify="left").place(x=100, y=230)
+        tk.Label(self, text="Para borrar, extiende únicamente tu dedo pulgar y deslízalo sobre la pantalla.",
+                 font=("Arial", 10), justify="left").place(
+            x=140, y=265)
+
+        tk.Label(self, text="Cambiar el Tamaño del Pincel:", font=("Arial", 15, "bold"), justify="left").place(x=100,
+                                                                                                               y=300)
+        tk.Label(self, text="Abre tu mano y cierra el meñique. Luego, varía la distancia entre el índice y el pulgar.",
+                 font=("Arial", 10), justify="left").place(
+            x=140, y=335)
+
+        tk.Label(self, text="Cambiar de Color del Pincel:", font=("Arial", 15, "bold"), justify="left").place(x=100,
+                                                                                                              y=370)
+        tk.Label(self,
+                 text="Levanta solo el dedo meñique y selecciona el color deseado deslizando el dedo por el selector.",
+                 font=("Arial", 10), justify="left").place(
+            x=140, y=405)
+
+        tk.Label(self, text="Guardar:", font=("Arial", 15, "bold"), justify="left").place(x=100,
+                                                                                          y=440)
+        tk.Label(self,
+                 text="Para guardar tu obra de arte, presiona el botón 'Guardar', colocale un nombre y la extensión "
+                      "deseada.",
+                 font=("Arial", 10), justify="left").place(
+            x=140, y=475)
 
 
 # ============================================================================================ Main code
@@ -67,23 +118,37 @@ window = tk.Tk()
 window.geometry("%dx%d" % (window.winfo_screenwidth(), window.winfo_screenheight()))
 window.title("DrawingWithHands ")
 
-# Botones
-# Iniciar Video
-imagenBI = tk.PhotoImage(file="Inicio.png")
-inicio = tk.Button(window, text="Iniciar", image=imagenBI, height="40", width="200", command=start_frame)
+# Botón Iniciar
+imagenBI = tk.PhotoImage(file="BTN_inicio.png")
+inicio = tk.Button(window, text="Iniciar", image=imagenBI, height="80", width="400", command=start_frame,
+                   borderwidth=0, highlightthickness=0)
 inicio.place(x=30, y=30)
 
-# Finalizar Video
-imagenBF = tk.PhotoImage(file="Finalizar.png")
-fin = tk.Button(window, text="Finalizar", image=imagenBF, height="40", width="200", command=stop_frame)
-fin.place(x=30, y=100)
+# Botón Finalizar
+imagenBF = tk.PhotoImage(file="BTN_guardar.png")
+fin = tk.Button(window, text="Finalizar", image=imagenBF, height="80", width="400", command=stop_frame,
+                borderwidth=0, highlightthickness=0)
+fin.place(x=30, y=130)
+
+# Botón Borrar
+imagenBE = tk.PhotoImage(file="BTN_borrar.png")
+borrar = tk.Button(window, text="Borrar", image=imagenBE, height="80", width="400",
+                   command=lambda: clear_canvas(drawn_points), borderwidth=0, highlightthickness=0)
+borrar.place(x=30, y=230)
+
+# Botón Ayuda
+imagenBA = tk.PhotoImage(file="BTN_ayuda.png")
+ayuda = tk.Button(window, text="Ayuda", image=imagenBA, height="80", width="400",
+                  command=show_instructions, borderwidth=0, highlightthickness=0)
+ayuda.place(x=30, y=330)
+
 # Video
 lbl_cam = tk.Label(window)
 lbl_cam.place(x=30, y=439)
 
-lbl_draw = tk.Canvas(window, width=drawWidth, height=drawHeight, bg="white")
-lbl_draw.place(x=485, y=200)
-draw_color_options(lbl_draw, colors)
+canvas = tk.Canvas(window, width=drawWidth, height=drawHeight, bg="white")
+canvas.place(x=485, y=200)
+draw_color_options(canvas, colors)
 
 txt_color = tk.Label(window, text="Color: ")
 txt_color.config(font=("Arial", 30))

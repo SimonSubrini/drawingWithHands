@@ -97,7 +97,7 @@ def update_hand_tracking(hands, canvas, cap, lbl_cam, drawn_points, brush_size, 
     # Dibujar los puntos en el canvas
     for point in drawn_points:
         x, y, color, size = point
-        canvas.create_oval(x - size, y - size, x + size, y + size, fill="#%02x%02x%02x" % color)
+        canvas.create_oval(x - size, y - size, x + size, y + size, fill="#%02x%02x%02x" % color, outline='')
 
     draw_color_options(canvas, colors)
 
@@ -116,13 +116,18 @@ def update_hand_tracking(hands, canvas, cap, lbl_cam, drawn_points, brush_size, 
                 if s > 0:
                     brush_size = s
                 else:
-                    addPointsForFingers(fingers['index'], brush_size, actual_color, wrist, drawWidth, drawHeight,
-                                        colors, drawn_points)
+                    thumb = fingers['thumb']
+                    index = fingers['index']
+                    middle = fingers['middle']
+                    if not (is_finger_up(middle, wrist) and is_finger_up(thumb, wrist)):
+                        addPointsForFingers(index, brush_size, actual_color, wrist, drawWidth, drawHeight,
+                                            colors, drawn_points)
 
     # Llamar a la función nuevamente después de un tiempo
     canvas.after(10, lambda: update_hand_tracking(hands, canvas, cap, lbl_cam, drawn_points, brush_size, colors,
                                                   actual_color, drawWidth, drawHeight, touch_threshold, txt_size,
                                                   txt_color_option))
+    return drawn_points
 
 
 # Función para detectar el toque y eliminar puntos
@@ -155,8 +160,12 @@ def changeColor(finger_landmarks, actual_color, drawWidth, drawHeight, colors, t
     pinky = finger_landmarks['pinky']
     num_of_px = 845 / len(colors)
     if pinky[2].y * drawHeight < 50:
-        actual_color = int(np.round((pinky[2].x * drawWidth) // num_of_px))
-        txt_color_option.config(font=("Arial", 50), fg="#%02x%02x%02x" % colors[actual_color])
+        try:
+            actual_color = int(np.round((pinky[2].x * drawWidth) // num_of_px))
+            txt_color_option.config(font=("Arial", 50), fg="#%02x%02x%02x" % colors[actual_color])
+        except Exception:
+            actual_color = len(colors) - 1
+            txt_color_option.config(font=("Arial", 50), fg="#%02x%02x%02x" % colors[actual_color])
     return actual_color
 
 
@@ -169,10 +178,15 @@ def changeBrushSize(finger_landmarks, wrist, drawWidth, drawHeight, txt_size):
     pinky = finger_landmarks['pinky']
     thumb_tip = (thumb[3].x * drawWidth, thumb[3].y * drawHeight)  # Obtener las coordenadas x e y del pulgar
     b_size = -1
-    if is_finger_up(middle, wrist) and is_finger_up(ring, wrist) and is_finger_up(pinky, wrist):
+    if is_finger_up(middle, wrist) and is_finger_up(ring, wrist) and not is_finger_up(pinky, wrist):
         b_size = int(dist(thumb_tip, (index[2].x * drawWidth, index[2].y * drawHeight)) / 10)
         txt_size.config(text=f"Tamaño: {b_size}")
     return b_size
+
+
+def clear_canvas(drawn_points):
+    # Borra todos los puntos dibujados
+    drawn_points.clear()
 
 
 # Función para agregar puntos en función de otros dedos
