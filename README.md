@@ -43,7 +43,7 @@ Utiliza los gestos de tus manos para dibujar, borrar, cambiar el tamaño y el co
 Si deseas contribuir a este proyecto, ¡te doy la bienvenida! Sentite libre de enviar pull requests con nuevas características, mejoras de código o correcciones de errores.
 
 ## Créditos
-Este proyecto fue creado por [Simón Subrini] https://www.linkedin.com/in/sim%C3%B3n-subrini/.
+Este proyecto fue creado por [Simón Subrini] https://www.linkedin.com/in/simón-subrini/.
 
 ¡Gracias por utilizar Drawing With Hands!
 
