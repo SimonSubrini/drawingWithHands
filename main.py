@@ -1,9 +1,6 @@
-import cv2
-import mediapipe as mp
-from PIL import Image, ImageTk, ImageGrab
+import os
+import sys
 from tkinter import filedialog, messagebox
-import tkinter as tk
-import numpy as np
 from drawing_canvas import *
 from drawing_utils import *
 
@@ -50,21 +47,21 @@ class instructionsScreen(tk.Toplevel):
                  text="Asegúrate de que tu mano esté siempre visible y frente a la pantalla para un mejor seguimiento.",
                  font=("Arial", 10), justify="left").place(
             x=140, y=125)
-        self.open_hand_icon = tk.PhotoImage(file='DibujoManoAbierta.png')
+        self.open_hand_icon = tk.PhotoImage(file=resource_path('images/DibujoManoAbierta.png'))
         tk.Label(self, image=self.open_hand_icon).place(x=80, y=115)
 
         tk.Label(self, text="Dibujar:", font=("Arial", 15, "bold"), justify="left").place(x=100, y=160)
         tk.Label(self, text="Extiende únicamente tu dedo índice y muévelo sobre la pantalla.",
                  font=("Arial", 10), justify="left").place(
             x=140, y=195)
-        self.index_finger_icon = tk.PhotoImage(file='DibujoDedoIndice.png')
+        self.index_finger_icon = tk.PhotoImage(file=resource_path('images/DibujoDedoIndice.png'))
         tk.Label(self, image=self.index_finger_icon).place(x=80, y=185)
 
         tk.Label(self, text="Borrar:", font=("Arial", 15, "bold"), justify="left").place(x=100, y=230)
         tk.Label(self, text="Extiende únicamente tu dedo pulgar y deslízalo sobre la pantalla.",
                  font=("Arial", 10), justify="left").place(
             x=140, y=265)
-        self.thumb_finger_icon = tk.PhotoImage(file='DibujoDedoPulgar.png')
+        self.thumb_finger_icon = tk.PhotoImage(file=resource_path('images/DibujoDedoPulgar.png'))
         tk.Label(self, image=self.thumb_finger_icon).place(x=80, y=255)
 
         tk.Label(self, text="Cambiar el Tamaño del Pincel:", font=("Arial", 15, "bold"), justify="left").place(x=100,
@@ -72,7 +69,7 @@ class instructionsScreen(tk.Toplevel):
         tk.Label(self, text="Abre tu mano y cierra el meñique. Luego, varía la distancia entre el índice y el pulgar.",
                  font=("Arial", 10), justify="left").place(
             x=140, y=335)
-        self.pinkyC_finger_icon = tk.PhotoImage(file='DibujoDedoMe-C.png')
+        self.pinkyC_finger_icon = tk.PhotoImage(file=resource_path('images/DibujoDedoMe-C.png'))
         tk.Label(self, image=self.pinkyC_finger_icon).place(x=80, y=325)
 
         tk.Label(self, text="Cambiar de Color del Pincel:", font=("Arial", 15, "bold"), justify="left").place(x=100,
@@ -81,9 +78,16 @@ class instructionsScreen(tk.Toplevel):
                  text="Abre la mano y selecciona el color deseado deslizando el dedo meñique por el selector.",
                  font=("Arial", 10), justify="left").place(
             x=140, y=405)
-        self.pinky_finger_icon = tk.PhotoImage(file='DibujoDedoMenique.png')
+        self.pinky_finger_icon = tk.PhotoImage(file=resource_path('images/DibujoDedoMenique.png'))
         tk.Label(self, image=self.pinky_finger_icon).place(x=80, y=395)
 
+
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
 
 
 # ============================================================================================ Main code
@@ -124,27 +128,28 @@ drawHeight = 475
 window = tk.Tk()
 window.geometry("%dx%d" % (window.winfo_screenwidth(), window.winfo_screenheight()))
 window.title("DrawingWithHands ")
+window.iconbitmap(resource_path("images/icon.ico"))
 
 # Botón Iniciar
-imagenBI = tk.PhotoImage(file="BTN_inicio.png")
+imagenBI = tk.PhotoImage(file=resource_path("images/BTN_inicio.png"))
 inicio = tk.Button(window, text="Iniciar", image=imagenBI, height="80", width="400", command=start_frame,
                    borderwidth=0, highlightthickness=0)
 inicio.place(x=30, y=30)
 
 # Botón Finalizar
-imagenBF = tk.PhotoImage(file="BTN_guardar.png")
+imagenBF = tk.PhotoImage(file=resource_path("images/BTN_guardar.png"))
 fin = tk.Button(window, text="Finalizar", image=imagenBF, height="80", width="400", command=save,
                 borderwidth=0, highlightthickness=0)
 fin.place(x=30, y=130)
 
 # Botón Borrar
-imagenBE = tk.PhotoImage(file="BTN_borrar.png")
+imagenBE = tk.PhotoImage(file=resource_path("images/BTN_borrar.png"))
 borrar = tk.Button(window, text="Borrar", image=imagenBE, height="80", width="400",
                    command=lambda: clear_canvas(drawn_points), borderwidth=0, highlightthickness=0)
 borrar.place(x=30, y=230)
 
 # Botón Ayuda
-imagenBA = tk.PhotoImage(file="BTN_ayuda.png")
+imagenBA = tk.PhotoImage(file=resource_path("images/BTN_ayuda.png"))
 ayuda = tk.Button(window, text="Ayuda", image=imagenBA, height="80", width="400",
                   command=show_instructions, borderwidth=0, highlightthickness=0)
 ayuda.place(x=30, y=330)
