@@ -10,14 +10,17 @@ from drawing_utils import *
 
 def start_frame():
     global cap, drawn_points
-    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-    drawn_points = update_hand_tracking(hands, canvas, cap, lbl_cam, drawn_points, brush_size, colors, actual_color,
-                                        drawWidth,
-                                        drawHeight, touch_threshold, txt_size, txt_color_option)
+    if cap is None:
+        cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        drawn_points = update_hand_tracking(hands, canvas, cap, lbl_cam, drawn_points, brush_size, colors, actual_color,
+                                            drawWidth,
+                                            drawHeight, touch_threshold, txt_size, txt_color_option)
 
 
-def stop_frame():
+def save():
+    global cap
     cap.release()
+    cap = None
     fileLocation = filedialog.asksaveasfilename(defaultextension="jpg")
     x = window.winfo_rootx()
     y = window.winfo_rooty()
@@ -27,17 +30,18 @@ def stop_frame():
     showImage = messagebox.askyesno("Drawing With Hands", "Do you want to open image?")
     if showImage:
         img.show()
+    start_frame()
 
 
 def show_instructions():
-    instructions_window = instructions_screen(window)
+    instructionsScreen(window)
 
 
-class instructions_screen(tk.Toplevel):
+class instructionsScreen(tk.Toplevel):
     def __init__(self, parent):
         super().__init__(parent)
         self.title("Instrucciones")
-        self.geometry("800x600")
+        self.geometry("800x500")
 
         tk.Label(self, text="Instrucciones de uso", font=("Arial", 30)).place(x=240, y=30)
 
@@ -46,37 +50,40 @@ class instructions_screen(tk.Toplevel):
                  text="Asegúrate de que tu mano esté siempre visible y frente a la pantalla para un mejor seguimiento.",
                  font=("Arial", 10), justify="left").place(
             x=140, y=125)
+        self.open_hand_icon = tk.PhotoImage(file='DibujoManoAbierta.png')
+        tk.Label(self, image=self.open_hand_icon).place(x=80, y=115)
 
         tk.Label(self, text="Dibujar:", font=("Arial", 15, "bold"), justify="left").place(x=100, y=160)
-        tk.Label(self, text="Para dibujar, extiende únicamente tu dedo índice y muévelo sobre la pantalla.",
+        tk.Label(self, text="Extiende únicamente tu dedo índice y muévelo sobre la pantalla.",
                  font=("Arial", 10), justify="left").place(
             x=140, y=195)
+        self.index_finger_icon = tk.PhotoImage(file='DibujoDedoIndice.png')
+        tk.Label(self, image=self.index_finger_icon).place(x=80, y=185)
 
         tk.Label(self, text="Borrar:", font=("Arial", 15, "bold"), justify="left").place(x=100, y=230)
-        tk.Label(self, text="Para borrar, extiende únicamente tu dedo pulgar y deslízalo sobre la pantalla.",
+        tk.Label(self, text="Extiende únicamente tu dedo pulgar y deslízalo sobre la pantalla.",
                  font=("Arial", 10), justify="left").place(
             x=140, y=265)
+        self.thumb_finger_icon = tk.PhotoImage(file='DibujoDedoPulgar.png')
+        tk.Label(self, image=self.thumb_finger_icon).place(x=80, y=255)
 
         tk.Label(self, text="Cambiar el Tamaño del Pincel:", font=("Arial", 15, "bold"), justify="left").place(x=100,
                                                                                                                y=300)
         tk.Label(self, text="Abre tu mano y cierra el meñique. Luego, varía la distancia entre el índice y el pulgar.",
                  font=("Arial", 10), justify="left").place(
             x=140, y=335)
+        self.pinkyC_finger_icon = tk.PhotoImage(file='DibujoDedoMe-C.png')
+        tk.Label(self, image=self.pinkyC_finger_icon).place(x=80, y=325)
 
         tk.Label(self, text="Cambiar de Color del Pincel:", font=("Arial", 15, "bold"), justify="left").place(x=100,
                                                                                                               y=370)
         tk.Label(self,
-                 text="Levanta solo el dedo meñique y selecciona el color deseado deslizando el dedo por el selector.",
+                 text="Abre la mano y selecciona el color deseado deslizando el dedo meñique por el selector.",
                  font=("Arial", 10), justify="left").place(
             x=140, y=405)
+        self.pinky_finger_icon = tk.PhotoImage(file='DibujoDedoMenique.png')
+        tk.Label(self, image=self.pinky_finger_icon).place(x=80, y=395)
 
-        tk.Label(self, text="Guardar:", font=("Arial", 15, "bold"), justify="left").place(x=100,
-                                                                                          y=440)
-        tk.Label(self,
-                 text="Para guardar tu obra de arte, presiona el botón 'Guardar', colocale un nombre y la extensión "
-                      "deseada.",
-                 font=("Arial", 10), justify="left").place(
-            x=140, y=475)
 
 
 # ============================================================================================ Main code
@@ -126,7 +133,7 @@ inicio.place(x=30, y=30)
 
 # Botón Finalizar
 imagenBF = tk.PhotoImage(file="BTN_guardar.png")
-fin = tk.Button(window, text="Finalizar", image=imagenBF, height="80", width="400", command=stop_frame,
+fin = tk.Button(window, text="Finalizar", image=imagenBF, height="80", width="400", command=save,
                 borderwidth=0, highlightthickness=0)
 fin.place(x=30, y=130)
 
