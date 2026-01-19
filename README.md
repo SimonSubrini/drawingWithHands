@@ -1,8 +1,8 @@
-# Drawing With Hands
-**Drawing With Hands** es un emocionante proyecto de visión por computadora que te permite dibujar de una manera completamente nueva y emocionante: ¡con tus propias manos! 
+# Drawing With Your Hands
+**Drawing With Your Hands** es un proyecto de visión por computadora que te permite dibujar de una manera completamente nueva: ¡con tus propias manos! 
 Esta aplicación innovadora utiliza la tecnología de mediapipe y opencv para convertir tus gestos en obras de arte digitales.
 
-Con **Drawing With Hands**, podrás realizar las siguientes acciones:
+Con **Drawing With Your Hands**, podrás realizar las siguientes acciones:
 
 **Dibujar:** Utiliza el dedo índice para trazar líneas  libremente en la pantalla.
 
@@ -14,7 +14,6 @@ Con **Drawing With Hands**, podrás realizar las siguientes acciones:
 
 **Guardar tu proyecto:** Con un simple clic en el botón "Guardar", podrás guardar tu creación en tu dispositivo para compartirla o editarla más tarde.
 
-¡Con **Drawing With Hands**, tu creatividad no tiene límites!
 
 ## Requisitos
 Python 3.x
@@ -39,11 +38,5 @@ Utiliza los gestos de tus manos para dibujar, borrar, cambiar el tamaño y el co
 
 ¡Deja volar tu imaginación y crea obras de arte únicas utilizando tus propias manos!
 
-## Contribución
-Si deseas contribuir a este proyecto, ¡te doy la bienvenida! Sentite libre de enviar pull requests con nuevas características, mejoras de código o correcciones de errores.
-
 ## Créditos
 Este proyecto fue creado por [Simón Subrini] https://www.linkedin.com/in/simón-subrini/.
-
-¡Gracias por utilizar Drawing With Hands!
-
